@@ -5,6 +5,7 @@
 
 int main(int argc, char **argv) {
     using namespace std;
+
     try {
         string file_name = argv[1];
         ifstream file(file_name);
@@ -16,8 +17,8 @@ int main(int argc, char **argv) {
 
         int text_size = text.length();
         int w_size = w - text_size - 2;
-        int l_space = ceil(w_size / 2.0);
-        int r_space = floor(w_size / 2.0);
+        int l_space = floor(w_size / 2.0);
+        int r_space = ceil(w_size / 2.0);
         int h_text_position = ceil(h / 2.0);
 
         int line_count = ceil(double(text_size) / double(w - 2));
@@ -31,7 +32,6 @@ int main(int argc, char **argv) {
         }
 
         cout << string(w, '#') << endl;
-
         if (line_count <= 1) {
             for (int i = 0; i < h - 2; i++) {
                 if (i == h_text_position - 2) {
@@ -50,8 +50,8 @@ int main(int argc, char **argv) {
                 } else {
                     string my_str = text.substr(substring_iteration, char_count);
                     int number_of_spaces = (w - 2) - my_str.length();
-                    int left_spaces_2 = ceil(double(number_of_spaces) / 2.0);
-                    int right_spaces_2 = floor(double(number_of_spaces) / 2.0);
+                    int left_spaces_2 = floor(double(number_of_spaces) / 2.0);
+                    int right_spaces_2 = ceil(double(number_of_spaces) / 2.0);
                     cout << "#" << string(left_spaces_2, ' ') << my_str << string(right_spaces_2, ' ') << "#" << endl;
                     substring_iteration += char_count;
                 }
@@ -61,9 +61,9 @@ int main(int argc, char **argv) {
         return 0;
     }
     catch (...) {
-        cout << "file must take one argument which is json file localization in shape "
-                "{w:SZEROKOSCRAMKI,h:WYSOKOSCRAMKI,text:TEKSTDOWPISANIAWRAMCE}, SZEROKOSC"
-                "  and WYSOKOSC must be an int and TEKST should be string" << endl;
-        return 0;
+        cout << "file must take one argument which is a json location absolute path "
+                "{w : frame width, h : frame height, text : text to fit into the frame}, w and h must be integers "
+                "and text must be a string" << endl;
+        return 1;
     }
 }
