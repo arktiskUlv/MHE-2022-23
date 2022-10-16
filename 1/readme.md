@@ -1,0 +1,1 @@
+json configured text frame creator
