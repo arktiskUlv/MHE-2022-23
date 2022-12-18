@@ -1,6 +1,7 @@
 #include <iostream>
 #include <utility>
 #include <vector>
+#include <complex>
 
 bool isInVector(std::vector<int> v, int x) {
     if (std::find(v.begin(), v.end(), x) != v.end()) {
@@ -16,9 +17,9 @@ public:
 public:
     Item(double value, double weight);
 
-    double getValue() const;
+    [[nodiscard]] double getValue() const;
 
-    double getWeight() const;
+    [[nodiscard]] double getWeight() const;
 
 private:
     double value;
@@ -56,33 +57,32 @@ private:
 public:
     explicit Knapsack(std::vector<int> indexes) : indexes(std::move(indexes)) {}
 
-    const std::vector<int> &getIndexes() const {
+    [[nodiscard]] const std::vector<int> &getIndexes() const {
         return indexes;
+    }
+
+    void setIndexes(const std::vector<int> &indexes) {
+        Knapsack::indexes = indexes;
     }
 };
 
 class Puzzle {
 public:
-    const std::vector<Item> &getItemSet() const {
+    [[nodiscard]] const std::vector<Item> &getItemSet() const {
         return itemSet;
     }
 
-    const Knapsack &getKnapsack() const {
+    [[nodiscard]] const Knapsack &getKnapsack() const {
         return (Knapsack &&) knapsack.getIndexes();
     }
 
-    const Knapsack &getCorrectKnapsack() const {
-        return correctKnapsack;
-    }
-
-    int getCapacity() const {
+    [[nodiscard]] int getCapacity() const {
         return capacity;
     }
 
 public:
     friend std::ostream &operator<<(std::ostream &os, const Puzzle &puzzle) {
         os << "Capacity: " << puzzle.capacity << std::endl;
-        os << "Solution: " << puzzle.knapsack << std::endl;
         os << "Item set: " << std::endl;
         for (int i = 0; i < puzzle.itemSet.size(); i++) {
             os << "\t[" << i << "] " << puzzle.itemSet[i] << std::endl;
@@ -91,84 +91,80 @@ public:
         return os;
     }
 
-    Puzzle(std::vector<Item> itemSet, Knapsack knapsack, Knapsack correctKnapsack, int capacity)
-            : itemSet(std::move(itemSet)), knapsack(std::move(knapsack)), correctKnapsack(std::move(correctKnapsack)),
-              capacity(capacity) {}
+    Puzzle(std::vector<Item> itemSet, Knapsack knapsack, int capacity)
+            : itemSet(std::move(itemSet)), knapsack(std::move(knapsack)), capacity(capacity) {}
 
 private:
     std::vector<Item> itemSet;
     Knapsack knapsack;
-    Knapsack correctKnapsack;
     int capacity;
 };
 
-int evaluate(Puzzle puzzle) {
-    int load = 0;
 
-    std::vector<int> correctKnapsack = puzzle.getCorrectKnapsack().getIndexes();
-    std::vector<int> knapsack = puzzle.getKnapsack().getIndexes();
-    std::vector<Item> itemSet = puzzle.getItemSet();
-
-    for (int i: correctKnapsack) {
-        load += itemSet[i].getWeight();
+double evaluate(const Puzzle &puzzle) {
+    std::vector<int> v = puzzle.getKnapsack().getIndexes();
+    double value = 0;
+    double weight = 0;
+    for (int i: v) {
+        value += puzzle.getItemSet()[i].getValue();
+        weight += puzzle.getItemSet()[i].getWeight();
     }
 
-    if (load > puzzle.getCapacity()) return itemSet.size() + 1;
-
-    int errors = abs(correctKnapsack.size() - knapsack.size());
-    if (knapsack.size() > correctKnapsack.size()) {
-        for (int i: correctKnapsack) {
-            if (!isInVector(knapsack, i)) {
-                errors++;
-            }
-        }
-    } else {
-        for (int i: knapsack) {
-            if (!isInVector(correctKnapsack, i)) {
-                errors++;
-            }
-        }
+    if (weight > puzzle.getCapacity()) {
+        value = -1 * weight;
     }
-    return errors;
+
+    return value;
 }
 
-int evaluate(Puzzle puzzle, Knapsack solution) {
-    int load = 0;
-
-    std::vector<int> correctKnapsack = puzzle.getCorrectKnapsack().getIndexes();
-    std::vector<int> knapsack = solution.getIndexes();
-    std::vector<Item> itemSet = puzzle.getItemSet();
-
-    for (int i: correctKnapsack) {
-        load += itemSet[i].getWeight();
+double evaluate(const Puzzle &puzzle, const Knapsack &solution) {
+    std::vector<int> v = solution.getIndexes();
+    double value = 0;
+    double weight = 0;
+    for (int i: v) {
+        value += puzzle.getItemSet()[i].getValue();
+        weight += puzzle.getItemSet()[i].getWeight();
     }
 
-    if (load > puzzle.getCapacity()) return itemSet.size() + 1;
-
-    int errors = abs(correctKnapsack.size() - knapsack.size());
-    if (knapsack.size() > correctKnapsack.size()) {
-        for (int i: correctKnapsack) {
-            if (!isInVector(knapsack, i)) {
-                errors++;
-            }
-        }
-    } else {
-        for (int i: knapsack) {
-            if (!isInVector(correctKnapsack, i)) {
-                errors++;
-            }
-        }
+    if (weight > puzzle.getCapacity()) {
+        value = -1 * weight;
     }
-    return errors;
+
+    return value;
+}
+
+std::vector<Knapsack> genPowerSet(int size) {
+    std::vector<Knapsack> powerSet;
+    unsigned int powerSetSize = pow(2, size);
+
+    for (int counter = 0; counter < powerSetSize; counter++) {
+        std::vector<int> x = {};
+        for (int j = 0; j < size; j++) {
+            if (counter & (1 << j)) {
+                x.push_back(j);
+            }
+        }
+        Knapsack knapsack(x);
+        powerSet.push_back(knapsack);
+    }
+    powerSet.erase(powerSet.begin());
+
+    return powerSet;
+}
+
+double fullOverview(Puzzle puzzle) {
+    std::vector<Knapsack> x = genPowerSet(puzzle.getItemSet().size());
+    double bestScore = evaluate(puzzle, x.back());
+
+    for (const Knapsack &k: x) {
+        double score = evaluate(puzzle, k);
+        std::cout << "solution: " << k << "\tscore: " << score << std::endl;
+        if (score > bestScore) bestScore = score;
+    }
+    return bestScore;
 }
 
 int main() {
-    std::vector<Item> itemSet = {{4,  12},
-                                 {2,  2},
-                                 {2,  1},
-                                 {1,  1},
-                                 {10, 4}};
-
     Knapsack knapsack({2, 3});
 
     Puzzle puzzle({{4,  12},
@@ -179,14 +175,11 @@ int main() {
 
                   knapsack,
 
-                  knapsack,
-
-                  400);
+                  15);
 
     std::cout << puzzle << std::endl;
 
-    std::cout << evaluate(puzzle) << std::endl;
-    std::cout << evaluate(puzzle, Knapsack({3, 1}));
-    std::cout << puzzle.getCorrectKnapsack();
+    fullOverview(puzzle);
+
     return 0;
 }
