@@ -119,7 +119,7 @@ double evaluate(const Puzzle &puzzle) {
     }
 
     if (weight > puzzle.getCapacity()) {
-        value = -1 * weight;
+        value -= 2 * weight;
     }
 
     return value;
@@ -160,16 +160,21 @@ std::vector<Knapsack> genPowerSet(int size) {
     return powerSet;
 }
 
-double fullOverview(Puzzle puzzle) {
+Knapsack fullOverview(Puzzle puzzle) {
     std::vector<Knapsack> x = genPowerSet(puzzle.getItemSet().size());
     double bestScore = evaluate(puzzle, x.back());
 
+    Knapsack bestSolution({});
     for (const Knapsack &k: x) {
         double score = evaluate(puzzle, k);
         std::cout << "solution: " << k << "\tscore: " << score << std::endl;
-        if (score > bestScore) bestScore = score;
+        if (score > bestScore) {
+            bestSolution = k;
+            bestScore = score;
+        }
     }
-    return bestScore;
+    std::cout << "bestScore: " << bestScore << std::endl;
+    return bestSolution;
 }
 
 std::vector<Puzzle> getNeighbours(Puzzle puzzle) {
@@ -265,44 +270,54 @@ Puzzle stochasticHillClimbing(const Puzzle &puzzle, int iterations) {
     return result;
 }
 
-int main(int argc, char** argv) {
-//    std::string method = argv[1];
-//    int iter = std::stoi(argv[2]);
-//    std::string file_name = argv[3];
-    std::ifstream file_input("C:\\Users\\s23435\\CLionProjects\\untitled\\data.json", std::ifstream::binary);
+int main(int argc, char **argv) {
+    std::string method = argv[1];
+    int iter = std::stoi(argv[3]);
+    std::string file_name = argv[2];
+    std::ifstream file_input(file_name, std::ifstream::binary);
     nlohmann::json data = nlohmann::json::parse(file_input);
 
     int capacity = data["capacity"];
-    Knapsack knapsack1(data["knapsack"]);
+    Knapsack knapsack(data["knapsack"]);
+    std::vector<Item> itemSet;
+    for (auto & i : data["itemSet"]) {
+        Item item(i[0], i[1]);
+        itemSet.push_back(item);
+    }
+    Puzzle puzzle(itemSet, knapsack, capacity);
 
-    std::vector<Item> itemSet2 = data["itemSet"];
+//    std::cout << puzzle << std::endl;
 
-//    Puzzle puzzle3(data["itemSet"], data["knapsack"]);
+    if (method == "d") {
+        Puzzle deterministicPuzzle = deterministicHillClimbing(puzzle);
+        std::cout << deterministicPuzzle << std::endl;
+        std::cout << evaluate(deterministicPuzzle) << std::endl;
+    }
+    if (method == "s") {
+        Puzzle stochasticPuzzle = stochasticHillClimbing(puzzle, iter);
+        std::cout << stochasticPuzzle << std::endl;
+        std::cout << evaluate(stochasticPuzzle) << std::endl;
+    }
+    if (method == "o") {
+        Knapsack bestSolution = fullOverview(puzzle);
+        std::cout << "bestSolution: " << bestSolution << std::endl;
+        std::cout << "bestSolutionScore: " << evaluate(puzzle, bestSolution);
+    }
 
-    Knapsack knapsack({2, 3});
-    std::vector<Item> itemSet = {{4,  12},
-                                 {2,  2},
-                                 {2,  1},
-                                 {1,  1},
-                                 {10, 4}};
-
-    Puzzle puzzle(itemSet, knapsack, 15);
-
-    std::cout << puzzle << std::endl;
 
 //    fullOverview(puzzle);
 
-
-    std::vector<Puzzle> n = getNeighbours(puzzle);
-    for (const Puzzle &k: n) {
-        std::cout << k << evaluate(k) << std::endl;
-    }
-
-    Puzzle puzzle1 = deterministicHillClimbing(puzzle);
-    std::cout << "\ndeterministic:\n" << puzzle1 << evaluate(puzzle1) << std::endl;
 //
-    Puzzle puzzle2 = stochasticHillClimbing(puzzle, 100);
-    std::cout << "\nstochastic:\n" << puzzle2 << evaluate(puzzle2);
+//    std::vector<Puzzle> n = getNeighbours(puzzle);
+//    for (const Puzzle &k: n) {
+//        std::cout << k << evaluate(k) << std::endl;
+//    }
+//
+//    Puzzle puzzle1 = deterministicHillClimbing(puzzle);
+//    std::cout << "\ndeterministic:\n" << puzzle1 << evaluate(puzzle1) << std::endl;
+////
+//    Puzzle puzzle2 = stochasticHillClimbing(puzzle, 100);
+//    std::cout << "\nstochastic:\n" << puzzle2 << evaluate(puzzle2);
 
     return 0;
 }
