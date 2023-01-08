@@ -125,9 +125,6 @@ void popFront(std::vector<Puzzle> &v) {
 }
 
 Puzzle taboo(const Puzzle &puzzle, int iterations, int maxSize, bool silent) {
-    // example arguments:
-    // ts C:\Users\au\CLionProjects\v3\data.json 1000 400
-    // path needs to be absolute because reasons apparently
     Puzzle result = puzzle;
     Puzzle grandResult = puzzle;
     double score = evaluate(puzzle);

@@ -43,24 +43,32 @@ public:
 };
 
 std::ostream &operator<<(std::ostream &os, const Knapsack &knapsack) {
-    os << "\tbinary: {";
+    std::string out;
+    out += "\tbinary: {";
     for (int i = 0; i < knapsack.binary.size() - 1; i++) {
-        os << knapsack.binary[i] << ", ";
+        out += std::to_string(knapsack.binary[i]);
+        out += ", ";
     }
-    os << knapsack.binary.back() << "}" << std::endl;
+    out += std::to_string(knapsack.binary.back());
+    out += "}\n";
 
-    os << "\tdecimal: {";
+    out += "\tdecimal: {";
     for (int i = 0; i < knapsack.binary.size() - 1; i++) {
         if (knapsack.binary[i] == 1) {
-            os << i << ", ";
+            out += std::to_string(i);
+            out += ", ";
         }
     }
     if (knapsack.binary.back() == 1) {
-        os << knapsack.binary.size() - 1 << "}" << std::endl;
+        out += std::to_string(knapsack.binary.size() - 1);
+        out += "}\n";
     } else {
-        os << "}" << std::endl;
+        out.pop_back();
+        out.pop_back();
+        out += "}\n";
     }
 
+    os << out;
     return os;
 }
 

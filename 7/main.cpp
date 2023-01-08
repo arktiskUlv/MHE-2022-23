@@ -1,6 +1,9 @@
 #include "puzzleFunctions.hpp"
 
 int main([[maybe_unused]] int argc, char **argv) {
+    // example arguments:
+    // ts C:\Users\au\CLionProjects\v3\data.json 1000 400
+    // path needs to be absolute because reasons apparently
     std::string method = argv[1];
     std::string file_name = argv[2];
     int iter = std::stoi(argv[3]);
