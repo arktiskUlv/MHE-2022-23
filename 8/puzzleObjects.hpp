@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <utility>
 #include <vector>
@@ -72,23 +73,11 @@ std::ostream &operator<<(std::ostream &os, const Knapsack &knapsack) {
     return os;
 }
 
-const std::vector<int> &Knapsack::getBinary() const {
-    return binary;
-}
-
-void Knapsack::expandBinary(int size) {
-    while (true) {
-        if (this->binary.size() < size) {
-            this->binary.push_back(0);
-        } else {
-            break;
-        }
-    }
-
-}
-
 class Puzzle {
 private:
+public:
+    void setKnapsack(const Knapsack &knapsack);
+
 public:
     [[nodiscard]] const std::vector<Item> &getItemSet() const;
 
@@ -120,14 +109,3 @@ std::ostream &operator<<(std::ostream &os, const Puzzle &puzzle) {
     return os;
 }
 
-const Knapsack &Puzzle::getKnapsack() const {
-    return knapsack;
-}
-
-const std::vector<Item> &Puzzle::getItemSet() const {
-    return itemSet;
-}
-
-int Puzzle::getCapacity() const {
-    return capacity;
-}

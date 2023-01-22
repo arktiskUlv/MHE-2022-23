@@ -1,4 +1,5 @@
-#import "puzzleObjects.hpp"
+#pragma once
+#include "puzzleObjects.hpp"
 
 std::vector<Puzzle> getNeighbours(const Puzzle &puzzle) {
     std::vector<Puzzle> neighbours;
@@ -42,7 +43,7 @@ double evaluate(const Puzzle &puzzle) {
     }
 
     if (weight > puzzle.getCapacity()) {
-        value -= 2 * weight;
+        value = 0;
     }
 
 
@@ -61,7 +62,7 @@ double evaluate(const Puzzle &puzzle, const Knapsack &knapsack) {
     }
 
     if (weight > puzzle.getCapacity()) {
-        value -= 2 * weight;
+        value = 0;
     }
 
 
@@ -91,27 +92,25 @@ Puzzle fullOverview(const Puzzle &puzzle, bool silent) {
 }
 
 Puzzle deterministicHillClimbing(const Puzzle &puzzle) {
-    Puzzle result = puzzle;
-    double score = evaluate(puzzle);
-    std::vector<Puzzle> n;
-    Puzzle greatPuzzle = puzzle;
+    Puzzle currentPuzzle = puzzle;
+    double currentScore = evaluate(puzzle);
 
     while (true) {
-        n = getNeighbours(greatPuzzle);
-        double preScore = score;
-        for (const Puzzle &neighbour: n) {
-            double tempScore = evaluate(neighbour);
-            if (tempScore > score) {
-                score = tempScore;
-                result = neighbour;
+        std::vector<Puzzle> neighbours = getNeighbours(currentPuzzle);
+        double previousScore = currentScore;
+        for (const Puzzle &neighbor: neighbours) {
+            double neighborScore = evaluate(neighbor);
+            if (neighborScore > currentScore) {
+                currentScore = neighborScore;
+                currentPuzzle = neighbor;
             }
         }
-        greatPuzzle = result;
-        if (preScore == score) {
-            return result;
+        if (previousScore == currentScore) {
+            return currentPuzzle;
         }
     }
 }
+
 
 bool operator==(const Puzzle &l, const Puzzle &r) {
     if (l.getKnapsack().getBinary() != r.getKnapsack().getBinary()) return false;
@@ -124,6 +123,7 @@ void popFront(std::vector<Puzzle> &v) {
     }
 }
 
+
 Puzzle taboo(const Puzzle &puzzle, int iterations, int maxSize, bool silent) {
     Puzzle result = puzzle;
     Puzzle grandResult = puzzle;
@@ -131,19 +131,20 @@ Puzzle taboo(const Puzzle &puzzle, int iterations, int maxSize, bool silent) {
     double grandScore = score;
     std::vector<Puzzle> neighbours;
     Puzzle greatPuzzle = puzzle;
-    std::vector<Puzzle> tabooPuzzle = {};
+    std::vector<Puzzle> taboo = {};
 
     while (iterations > 0) {
         neighbours = getNeighbours(greatPuzzle);
 
-        bool c = false;
+        bool checked = false;
         int unvisitedNeighbours = 0;
 
         for (const Puzzle &neighbour: neighbours) {
-            if (std::find(tabooPuzzle.begin(), tabooPuzzle.end(), neighbour) == tabooPuzzle.end()) {
+            // checks whether the element neighbour is present in the container taboo
+            if (std::find(taboo.begin(), taboo.end(), neighbour) == taboo.end()) {
                 unvisitedNeighbours++;
-                if (!c) {
-                    c = true;
+                if (!checked) {
+                    checked = true;
                     score = evaluate(neighbour);
                     result = neighbour;
                     continue;
@@ -158,11 +159,11 @@ Puzzle taboo(const Puzzle &puzzle, int iterations, int maxSize, bool silent) {
         if (!silent) {
             std::cout << "unvisited neighbours: " << unvisitedNeighbours << " per " << neighbours.size() << " elements."
                       << std::endl;
-            if (std::find(tabooPuzzle.begin(), tabooPuzzle.end(), result) == tabooPuzzle.end()) {
-                tabooPuzzle.push_back(result);
+            if (std::find(taboo.begin(), taboo.end(), result) == taboo.end()) {
+                taboo.push_back(result);
             }
-            if (tabooPuzzle.size() == maxSize) {
-                popFront(tabooPuzzle);
+            if (taboo.size() == maxSize) {
+                popFront(taboo);
                 std::cout << "reduction!" << std::endl;
             }
 
@@ -179,11 +180,11 @@ Puzzle taboo(const Puzzle &puzzle, int iterations, int maxSize, bool silent) {
             iterations--;
             std::cout << iterations << std::endl;
         } else {
-            if (std::find(tabooPuzzle.begin(), tabooPuzzle.end(), result) == tabooPuzzle.end()) {
-                tabooPuzzle.push_back(result);
+            if (std::find(taboo.begin(), taboo.end(), result) == taboo.end()) {
+                taboo.push_back(result);
             }
-            if (tabooPuzzle.size() == maxSize) {
-                popFront(tabooPuzzle);
+            if (taboo.size() == maxSize) {
+                popFront(taboo);
             }
 
             greatPuzzle = result;
@@ -202,35 +203,32 @@ Puzzle taboo(const Puzzle &puzzle, int iterations, int maxSize, bool silent) {
     return grandResult;
 }
 
+
 Puzzle stochasticHillClimbing(const Puzzle &puzzle, int iterations) {
-    Puzzle result = puzzle;
-    double score = evaluate(puzzle);
-    std::vector<Puzzle> n;
+    Puzzle bestPuzzle = puzzle;
+    double bestScore = evaluate(puzzle);
+    std::vector<Puzzle> neighbours;
 
-    std::random_device rd; // obtain a random number from hardware
+    std::random_device rd;
     std::mt19937 gen(rd());
-    (std::uniform_int_distribution<>(0, 2));
-
-    Puzzle greatPuzzle = puzzle;
 
     for (int i = 0; i < iterations; i++) {
-        n = getNeighbours(greatPuzzle);
-        std::uniform_int_distribution<> distribution(0, n.size() - 1);
-        Puzzle tempPuzzle = n[distribution(gen)];
-        greatPuzzle = tempPuzzle;
-
+        neighbours = getNeighbours(bestPuzzle);
+        std::uniform_int_distribution<> distribution(0, neighbours.size() - 1);
+        Puzzle tempPuzzle = neighbours[distribution(gen)];
         double tempScore = evaluate(tempPuzzle);
-        if (tempScore > score) {
-            score = tempScore;
-            result = tempPuzzle;
+        if (tempScore > bestScore) {
+            bestScore = tempScore;
+            bestPuzzle = tempPuzzle;
         }
     }
-    return result;
+    return bestPuzzle;
 }
 
-Puzzle annealing(const Puzzle& puzzle, int iterations, bool convergenceCurveSilence, bool printCallsSilence) {
-    std::random_device rd; // obtain a random number from hardware
-    std::mt19937 gen(rd()); // seed the generator
+
+Puzzle annealing(const Puzzle &puzzle, int iterations, bool convergenceCurveSilence, bool printCallsSilence) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
     int callAmount = 0;
     double result = evaluate(puzzle);
     Puzzle bestPuzzle = puzzle;
@@ -238,37 +236,180 @@ Puzzle annealing(const Puzzle& puzzle, int iterations, bool convergenceCurveSile
 
     for (int k = 0; k < iterations; k++) {
         std::vector<Puzzle> neighbours = getNeighbours(currentPosition);
-
-        std::uniform_int_distribution<> distr(0, neighbours.size() - 1); // define the range
-        Puzzle neighbour = neighbours[distr(gen)];
-
-        double newResult = evaluate(neighbour);
-        if (newResult > result) {
-            result = newResult;
-            bestPuzzle = neighbour;
-            currentPosition = neighbour;
-
+        std::uniform_int_distribution<> distribution(0, neighbours.size() - 1);
+        Puzzle neighbor = neighbours[distribution(gen)];
+        double neighborScore = evaluate(neighbor);
+        if (neighborScore > result) {
+            result = neighborScore;
+            bestPuzzle = neighbor;
+            currentPosition = neighbor;
         } else {
             std::uniform_real_distribution<double> rand(0, 1);
-            double temp = newResult - result;
+            double temp = neighborScore - result;
             if (temp < 0) {
                 temp = temp * -1;
             }
             double Tk = 1000.0 / (k + 0.01);
             if (rand(gen) < exp(-1 * temp / Tk)) {
-
-                currentPosition = neighbour;
-
+                currentPosition = neighbor;
             }
-
         }
-        if (convergenceCurveSilence) {
+        if (!convergenceCurveSilence) {
             std::cout << k << "\t" << result << std::endl;
         }
-
     }
-    if (printCallsSilence) {
+    if (!printCallsSilence) {
         std::cout << "evaluate was called: " << callAmount << " times." << std::endl;
     }
     return bestPuzzle;
 }
+
+Knapsack generateRandomKnapsack(int size) {
+    std::vector<int> randomVector;
+    std::random_device rd;
+    std::mt19937 eng(rd());
+    std::uniform_int_distribution<> distr(0, 1);
+    for (int i = 0; i < size; i++) {
+        randomVector.push_back(distr(eng));
+    }
+    Knapsack knapsack(randomVector);
+    return knapsack;
+}
+
+Puzzle createRandomPuzzle(const Puzzle &puzzle) {
+    int size = puzzle.getItemSet().size();
+    auto ret = generateRandomKnapsack(size);
+
+
+    return Puzzle(puzzle.getItemSet(), ret, puzzle.getCapacity());
+
+}
+
+int selectParent(std::vector<double> fitness) {
+    double totalFitness = 0;
+    for (double fitnes: fitness) {
+        totalFitness += fitnes;
+    }
+
+    double randomFitness = ((double) rand() / (RAND_MAX)) * totalFitness;
+    double currentFitness = 0;
+    for (int i = 0; i < fitness.size(); i++) {
+        currentFitness += fitness[i];
+        if (currentFitness >= randomFitness) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+
+Puzzle crossover(const Puzzle &parent1, const Puzzle &parent2) {
+    int crossoverPoint = rand() % parent1.getKnapsack().getBinary().size();
+    std::vector<int> childBackpack;
+    for (int i = 0; i < crossoverPoint; i++) {
+        childBackpack.push_back(parent1.getKnapsack().getBinary()[i]);
+    }
+    for (int i = crossoverPoint; i < parent2.getKnapsack().getBinary().size(); i++) {
+        childBackpack.push_back(parent2.getKnapsack().getBinary()[i]);
+    }
+    Puzzle child(parent1.getItemSet(), Knapsack(childBackpack), parent1.getCapacity());
+    return child;
+}
+
+void mutate(Puzzle &puzzle) {
+    double mutationRate = 0.05; // experiment with it
+    std::vector<int> binary = puzzle.getKnapsack().getBinary();
+    for (int & i : binary) {
+        double randomNumber = ((double) rand() / (RAND_MAX));
+        if (randomNumber < mutationRate) {
+            if (i == 1) {
+                i = 0;
+            } else {
+                i = 1;
+            }
+        }
+    }
+    puzzle.setKnapsack(Knapsack(binary));
+}
+
+
+Puzzle geneticAlgorithm(const Puzzle& puzzle, int iterations, int populationSize) {
+    std::vector<Puzzle> population;
+    // Initialize the population
+    for (int i = 0; i < populationSize; i++) {
+        population.push_back(createRandomPuzzle(puzzle));
+    }
+
+    for (int i = 0; i < iterations; i++) {
+        // Evaluate the fitness of each configuration
+        std::vector<double> fitness;
+        for (const auto & j : population) {
+            fitness.push_back(evaluate(j));
+        }
+
+        // Select the fittest configurations for reproduction
+        std::vector<Puzzle> parents;
+        for (int j = 0; j < populationSize / 2; j++) {
+            int parent1 = selectParent(fitness);
+            int parent2 = selectParent(fitness);
+            parents.push_back(population[parent1]);
+            parents.push_back(population[parent2]);
+        }
+
+        // Perform crossover to generate new offspring
+        std::vector<Puzzle> offspring;
+        for (int j = 0; j < parents.size() - 1; j += 2) {
+            Puzzle child = crossover(parents[j], parents[j + 1]);
+            offspring.push_back(child);
+        }
+
+        // Perform mutation on the offspring
+        for (auto & j : offspring) {
+            mutate(j);
+        }
+
+        // Replace the current population with the new offspring
+        population = offspring;
+    }
+
+    // Select the best puzzle
+    Puzzle bestPuzzle = population[0];
+    for (int i = 1; i < population.size(); i++) {
+        if (evaluate(population[i]) > evaluate(bestPuzzle)) {
+            bestPuzzle = population[i];
+        }
+    }
+    return bestPuzzle;
+}
+
+const std::vector<int> &Knapsack::getBinary() const {
+    return binary;
+}
+
+void Knapsack::expandBinary(int size) {
+    while (true) {
+        if (this->binary.size() < size) {
+            this->binary.push_back(0);
+        } else {
+            break;
+        }
+    }
+
+}
+
+const Knapsack &Puzzle::getKnapsack() const {
+    return knapsack;
+}
+
+const std::vector<Item> &Puzzle::getItemSet() const {
+    return itemSet;
+}
+
+int Puzzle::getCapacity() const {
+    return capacity;
+}
+
+void Puzzle::setKnapsack(const Knapsack &knapsack) {
+    Puzzle::knapsack = knapsack;
+}
+

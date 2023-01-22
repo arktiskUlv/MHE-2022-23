@@ -1,4 +1,5 @@
 #include "puzzleFunctions.hpp"
+#include "puzzleObjects.hpp"
 
 int main([[maybe_unused]] int argc, char **argv) {
     // example arguments:
@@ -56,6 +57,11 @@ int main([[maybe_unused]] int argc, char **argv) {
         Puzzle annealingPuzzle = annealing(puzzle, iter, false, false);
         std::cout << "bestPuzzle according to annealingPuzzle of " << iter << " iterations\n" << annealingPuzzle << std::endl;
         std::cout << "\nscore: " << evaluate(annealingPuzzle);
+    }
+    if (method == "g") {
+        Puzzle geneticPuzzle = geneticAlgorithm(puzzle, iter, maxSize);
+        std::cout << "bestPuzzle according to geneticPuzzle of " << iter << " iterations\n" << geneticPuzzle << std::endl;
+        std::cout << "\nscore: " << evaluate(geneticPuzzle);
     }
 
     auto end = std::chrono::steady_clock::now();
